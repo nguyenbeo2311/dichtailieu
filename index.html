@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dịch Thông Số May Mặc (Nhật - Việt)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Marked.js for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .drag-active {
+            border-color: #3b82f6 !important;
+            background-color: #eff6ff !important;
+        }
+        /* Markdown Table Styling */
+        .markdown-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            font-size: 0.875rem;
+        }
+        .markdown-content th, .markdown-content td {
+            border: 1px solid #e5e7eb;
+            padding: 0.75rem;
+            text-align: left;
+        }
+        .markdown-content th {
+            background-color: #f9fafb;
+            font-weight: 600;
+            color: #374151;
+        }
+        .markdown-content tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+        .markdown-content p {
+            margin-bottom: 0.75rem;
+            color: #374151;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-gray-800 p-4 md:p-8">
+
+    <div class="max-w-5xl mx-auto space-y-6">
+        <!-- Header -->
+        <header class="text-center space-y-2 mb-8">
+            <div class="inline-flex items-center justify-center p-3 bg-blue-100 rounded-full mb-3">
+                <i class="ph ph-translate text-3xl text-blue-600"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-gray-900">Trợ Lý Dịch Thuật Ngành May</h1>
+            <p class="text-gray-500 max-w-2xl mx-auto">Tải lên hình ảnh tài liệu kỹ thuật, bảng thông số tiếng Nhật để AI tự động nhận diện và dịch sang tiếng Việt.</p>
+        </header>
+
+        <!-- Main Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            <!-- Left Column: Upload Area -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col">
+                <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <i class="ph ph-image text-xl text-blue-500"></i> Hình ảnh thông số
+                </h2>
+                
+                <!-- Dropzone -->
+                <div id="dropzone" class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center flex-1 flex flex-col justify-center items-center cursor-pointer hover:bg-gray-50 transition-colors relative overflow-hidden min-h-[300px]">
+                    
+                    <input type="file" id="fileInput" class="hidden" accept="image/*">
+                    
+                    <!-- Placeholder State -->
+                    <div id="uploadPlaceholder" class="space-y-4">
+                        <i class="ph ph-upload-simple text-4xl text-gray-400"></i>
+                        <div>
+                            <p class="font-medium text-gray-700">Kéo thả hình ảnh vào đây</p>
+                            <p class="text-sm text-gray-500 mt-1">hoặc click để chọn file (JPG, PNG)</p>
+                        </div>
+                    </div>
+
+                    <!-- Image Preview State -->
+                    <img id="imagePreview" class="hidden absolute inset-0 w-full h-full object-contain p-2 bg-gray-50" src="" alt="Preview">
+                    
+                    <!-- Remove Image Button -->
+                    <button id="removeImgBtn" class="hidden absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 shadow-sm transition-transform hover:scale-105" title="Xoá ảnh">
+                        <i class="ph ph-x"></i>
+                    </button>
+                </div>
+
+                <!-- Action Button -->
+                <button id="translateBtn" disabled class="mt-6 w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2">
+                    <i class="ph ph-sparkle text-lg"></i>
+                    Bắt đầu dịch bằng AI
+                </button>
+            </div>
+
+            <!-- Right Column: Results Area -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex flex-col h-full min-h-[400px]">
+                <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <i class="ph ph-text-aa text-xl text-green-500"></i> Kết quả dịch thuật
+                </h2>
+                
+                <div class="flex-1 bg-gray-50 rounded-xl p-4 border border-gray-100 overflow-y-auto relative">
+                    
+                    <!-- Empty State -->
+                    <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
+                        <i class="ph ph-file-dashed text-5xl mb-3 opacity-50"></i>
+                        <p>Kết quả sẽ hiển thị ở đây</p>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div id="loadingState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-blue-600 bg-gray-50/80 backdrop-blur-sm z-10">
+                        <i class="ph ph-spinner-gap text-4xl animate-spin mb-3"></i>
+                        <p class="font-medium animate-pulse">AI đang phân tích & dịch thuật...</p>
+                        <p class="text-sm text-gray-500 mt-2 text-center px-4">Quá trình này có thể mất vài giây tùy thuộc vào độ chi tiết của hình ảnh.</p>
+                    </div>
+
+                    <!-- Error State -->
+                    <div id="errorState" class="hidden absolute inset-0 flex flex-col items-center justify-center text-red-500 p-4 text-center">
+                        <i class="ph ph-warning-circle text-4xl mb-3"></i>
+                        <p id="errorMsg" class="font-medium">Đã có lỗi xảy ra.</p>
+                    </div>
+
+                    <!-- Result Content -->
+                    <div id="resultContent" class="hidden markdown-content h-full"></div>
+                </div>
+                
+                <!-- Copy Button -->
+                <button id="copyBtn" class="hidden mt-4 w-full py-2.5 px-4 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2">
+                    <i class="ph ph-copy"></i>
+                    Sao chép kết quả
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+        const imagePreview = document.getElementById('imagePreview');
+        const removeImgBtn = document.getElementById('removeImgBtn');
+        const translateBtn = document.getElementById('translateBtn');
+        
+        const emptyState = document.getElementById('emptyState');
+        const loadingState = document.getElementById('loadingState');
+        const errorState = document.getElementById('errorState');
+        const errorMsg = document.getElementById('errorMsg');
+        const resultContent = document.getElementById('resultContent');
+        const copyBtn = document.getElementById('copyBtn');
+
+        let currentBase64Image = null;
+        let currentMimeType = null;
+
+        // Setup Drag & Drop
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropzone.addEventListener(eventName, () => dropzone.classList.add('drag-active'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, () => dropzone.classList.remove('drag-active'), false);
+        });
+
+        dropzone.addEventListener('drop', handleDrop, false);
+        dropzone.addEventListener('click', () => {
+            if(!currentBase64Image) fileInput.click();
+        });
+        
+        fileInput.addEventListener('change', function(e) {
+            if (this.files && this.files[0]) {
+                handleFile(this.files[0]);
+            }
+        });
+
+        removeImgBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent triggering dropzone click
+            resetImage();
+        });
+
+        function handleDrop(e) {
+            let dt = e.dataTransfer;
+            let files = dt.files;
+            if (files && files[0]) {
+                handleFile(files[0]);
+            }
+        }
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showError("Vui lòng tải lên một tệp hình ảnh hợp lệ.");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = function(e) {
+                const dataUrl = e.target.result;
+                currentMimeType = file.type;
+                // Extract base64 part
+                currentBase64Image = dataUrl.split(',')[1];
+                
+                // Update UI
+                imagePreview.src = dataUrl;
+                imagePreview.classList.remove('hidden');
+                uploadPlaceholder.classList.add('hidden');
+                removeImgBtn.classList.remove('hidden');
+                translateBtn.disabled = false;
+                
+                // Reset results
+                resetResults();
+            }
+        }
+
+        function resetImage() {
+            currentBase64Image = null;
+            currentMimeType = null;
+            fileInput.value = '';
+            
+            imagePreview.src = '';
+            imagePreview.classList.add('hidden');
+            uploadPlaceholder.classList.remove('hidden');
+            removeImgBtn.classList.add('hidden');
+            translateBtn.disabled = true;
+            
+            resetResults();
+        }
+
+        function resetResults() {
+            emptyState.classList.remove('hidden');
+            loadingState.classList.add('hidden');
+            errorState.classList.add('hidden');
+            resultContent.classList.add('hidden');
+            copyBtn.classList.add('hidden');
+            resultContent.innerHTML = '';
+        }
+
+        function showError(message) {
+            emptyState.classList.add('hidden');
+            loadingState.classList.add('hidden');
+            resultContent.classList.add('hidden');
+            copyBtn.classList.add('hidden');
+            
+            errorMsg.textContent = message;
+            errorState.classList.remove('hidden');
+        }
+
+        // Translation Logic
+        translateBtn.addEventListener('click', async () => {
+            if (!currentBase64Image) return;
+
+            // UI State updates
+            translateBtn.disabled = true;
+            emptyState.classList.add('hidden');
+            errorState.classList.add('hidden');
+            resultContent.classList.add('hidden');
+            copyBtn.classList.add('hidden');
+            loadingState.classList.remove('hidden');
+
+            try {
+                // Call Gemini API
+                const promptText = `Bạn là một chuyên gia kỹ thuật và phiên dịch viên tiếng Nhật chuyên ngành may mặc. 
+Vui lòng quan sát kỹ hình ảnh tài liệu/bảng thông số may mặc này. 
+Hãy trích xuất tất cả các thông số đo, bộ phận quần áo, và các ghi chú kỹ thuật có trong ảnh. 
+Dịch chúng từ tiếng Nhật sang tiếng Việt một cách chuẩn xác theo thuật ngữ chuyên ngành may mặc.
+
+Vui lòng trình bày kết quả dưới dạng Markdown với một cấu trúc rõ ràng:
+1. Nếu có bảng thông số, hãy tạo một Markdown table gồm 3 cột: "Tiếng Nhật", "Phiên âm / Romaji", và "Tiếng Việt (Chuyên ngành)".
+2. Nếu có các câu ghi chú kỹ thuật, hãy liệt kê chúng bên dưới bảng bằng danh sách gạch đầu dòng.
+
+Chỉ trả về nội dung bảng và ghi chú, không cần lời chào hỏi.`;
+
+                const payload = {
+                    contents: [
+                        {
+                            role: "user",
+                            parts: [
+                                { text: promptText },
+                                {
+                                    inlineData: {
+                                        mimeType: currentMimeType,
+                                        data: currentBase64Image
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                };
+
+                const apiKey = "AQ.Ab8RN6JxbpW4fZqjIr6JJRP1QbzF6hD6FtAsVWM0-46u75oVqQ"; // API key will be injected automatically
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+                let attempt = 0;
+                const maxRetries = 3;
+                let responseData = null;
+
+                // Simple exponential backoff
+                while (attempt < maxRetries) {
+                    try {
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        
+                        responseData = await response.json();
+                        break; // Success
+                    } catch (fetchErr) {
+                        attempt++;
+                        if (attempt >= maxRetries) throw fetchErr;
+                        // Wait before retry: 1s, 2s, 4s
+                        await new Promise(r => setTimeout(r, Math.pow(2, attempt - 1) * 1000));
+                    }
+                }
+
+                if (responseData?.candidates?.[0]?.content?.parts?.[0]?.text) {
+                    const markdownText = responseData.candidates[0].content.parts[0].text;
+                    
+                    // Parse Markdown to HTML
+                    resultContent.innerHTML = marked.parse(markdownText);
+                    
+                    // Show results
+                    loadingState.classList.add('hidden');
+                    resultContent.classList.remove('hidden');
+                    copyBtn.classList.remove('hidden');
+                } else {
+                    throw new Error("Không nhận được dữ liệu hợp lệ từ AI.");
+                }
+
+            } catch (error) {
+                console.error("Translation Error:", error);
+                showError("Đã xảy ra lỗi khi kết nối với AI. Vui lòng thử lại sau.");
+            } finally {
+                translateBtn.disabled = false;
+            }
+        });
+
+        // Copy Results
+        copyBtn.addEventListener('click', () => {
+            if (resultContent.innerText) {
+                // Try to copy inner text for plain text format
+                try {
+                    const el = document.createElement('textarea');
+                    el.value = resultContent.innerText;
+                    document.body.appendChild(el);
+                    el.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(el);
+                    
+                    // Temporary UI feedback
+                    const originalHTML = copyBtn.innerHTML;
+                    copyBtn.innerHTML = '<i class="ph ph-check text-green-500"></i> Đã sao chép';
+                    setTimeout(() => {
+                        copyBtn.innerHTML = originalHTML;
+                    }, 2000);
+                } catch(e) {
+                    alert("Không thể sao chép tự động. Vui lòng chọn và sao chép thủ công.");
+                }
+            }
+        });
+    </script>
+</body>
+</html>
